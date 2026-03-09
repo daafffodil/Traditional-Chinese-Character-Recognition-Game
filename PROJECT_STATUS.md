@@ -1,109 +1,70 @@
-# PROJECT_STATUS
+# Project Status
 
-## Current Progress
+## 1. Current Product Direction
+- **Mode 1 (one-to-one mapping)** is clearly the current MVP direction: the current game loop asks the learner to listen/read one simplified target and click one matching traditional character in a single grid.
+- **Mode 2 (one-to-many mapping with sentence context)** is not implemented yet and should be treated as a later phase after Mode 1 is fully stable end-to-end.
 
-The repository already contains a complete **MVP skeleton and core implementation** for the Traditional Chinese Character Recognition Game:
+## 2. What Has Been Completed
+- **Project structure is in place** with a standard Next.js App Router layout (`app/`, `components/`, `lib/`, `data/`, `types/`, `supabase/`) and runnable scripts (`dev`, `build`, `lint`).
+- **Core UI is implemented on the main page**:
+  - player name input
+  - difficulty selector (3×3 / 4×4 / 5×5)
+  - start/restart and replay-audio controls
+  - timer display
+  - status messaging
+  - sidebar score panels
+- **Reusable UI components exist**:
+  - `GameGrid` renders clickable character cells with correct/incorrect visual states.
+  - `ScoreTable` renders both history and leaderboard tables.
+- **Local character dataset is present** and wired into gameplay (150 entries from `data/dse_core_characters.json`).
+- **Simplified prompt + traditional answer flow is implemented**:
+  - each round selects one mapping
+  - simplified character is shown as question
+  - traditional distractor grid is generated and shuffled.
+- **Timer/game logic is implemented for a single round**:
+  - timer starts on round start
+  - click correctness is checked
+  - on success, completion time is computed and displayed.
+- **Supabase integration is implemented**:
+  - API route supports score insert + history/leaderboard queries.
+  - writes target `public.tc_game_scores`.
+  - SQL schema for `public.tc_game_scores` is included.
+- **Score/history UI is connected**:
+  - recent history and difficulty-filtered leaderboard are fetched and rendered.
+- **Graceful env-var fallback is present**:
+  - if Supabase env vars are missing, gameplay still runs and score panels degrade to empty/fallback behavior.
 
-- **Framework and tooling setup** is in place:
-  - Next.js 14 (App Router), React, TypeScript, Tailwind CSS, ESLint.
-  - Root config files are present (`package.json`, `tsconfig.json`, `next.config.mjs`, `tailwind.config.ts`, `postcss.config.js`).
-- **Main game page** is implemented in `app/page.tsx`:
-  - Player name input (optional)
-  - Difficulty selector (3×3 / 4×4 / 5×5)
-  - Start/Restart button
-  - Replay audio button
-  - Live timer display
-  - Status message area
-  - Integrated recent history and leaderboard panels
-- **Gameplay logic** is implemented:
-  - Random target character selection
-  - Grid generation with one correct Traditional Chinese answer and shuffled distractors
-  - Correct/incorrect click feedback (green/red highlights)
-  - Timer start/stop and elapsed time handling
-- **Audio support** is implemented via browser TTS (`SpeechSynthesisUtterance`) in `lib/audio.ts`.
-- **Character starter dataset** is included locally (`data/characters.ts`), so gameplay works without DB seeding.
-- **Supabase integration** exists and is scoped to the required table:
-  - Reads/writes use `public.tc_game_scores`
-  - Save score after correct answer
-  - Fetch recent history and difficulty-filtered leaderboard
-  - Graceful fallback when env vars are missing (game remains playable)
-- **Database SQL file** is provided at `supabase/create_tc_game_scores.sql`.
-- **README and env template** are present for local setup and deployment.
+## 3. What Is Not Yet Completed
+For the **current MVP scope**, these are still missing or need strengthening:
+- **One-to-one gameplay loop completion (productized)**: current loop works, but there is no multi-round/session progression (e.g., N questions per run, end-of-session summary, restart flow tied to session goals).
+- **Click correctness check hardening**: correctness checking exists, but there is no anti-double-submit/locking around async save and no explicit telemetry/error state for repeated taps under latency.
+- **Timer completion and save flow hardening**: timer/save works, but no robust handling for save-in-progress, retry, or explicit “saved vs not saved” state beyond status text.
+- **Insert to `public.tc_game_scores` validation**: insertion is implemented, but production readiness depends on Supabase RLS/policy setup and matching env keys at deploy time.
+- **Leaderboard/history refresh robustness**: refresh runs after save and difficulty changes, but no loading/error UI states and no backoff/retry when Supabase is temporarily unavailable.
+- **Graceful fallback UX can be clearer**: fallback exists, but messaging can be further unified so users always know whether they are in offline/local mode and that leaderboard data may be unavailable.
 
----
+## 4. Next Recommended Step
+**Best single next task:**
 
-## Missing Features
+Implement a **Mode 1 “end-to-end score commit path” hardening pass** that finalizes the correct-answer flow from click → timer stop → save status → panel refresh using `public.tc_game_scores` as the source of truth.
 
-Compared to `PRD.md`, most MVP items are implemented. Remaining gaps or partial areas are:
+Concretely, do this in one focused PR:
+1. Add explicit save states (`idle/saving/saved/error`) to prevent duplicate submits.
+2. Show clear UI feedback when a record is stored vs failed.
+3. Trigger deterministic leaderboard/history refresh only after save completion.
+4. Keep current fallback behavior when env vars are missing, but surface a consistent “local mode” hint.
 
-1. **Reward/error sounds are not implemented**
-   - PRD mentions playing a reward sound and error sound.
-   - Current app provides visual feedback and TTS for prompts, but no dedicated SFX files or audio cues for right/wrong clicks.
+This gives a fully runnable Mode 1 loop with reliable Supabase persistence.
 
-2. **No explicit personal-best view per player**
-   - PRD competition section includes personal best and classroom comparison.
-   - Current leaderboard is global (and filtered by grid size), but there is no dedicated “my best time” panel tied to current player name.
+## 5. Risks / Possible Issues
+- **Supabase env vars may be absent/mismatched** between local and deployment environments.
+- **RLS policies on `public.tc_game_scores` may block anon insert/select**, causing silent feature degradation if not surfaced clearly.
+- **Schema drift risk**: app assumes exact columns (`player_name`, `grid_size`, `completion_time`, `created_at`).
+- **Network instability** can cause intermittent save/query failures; current UX has limited retry/error handling.
+- **Browser TTS variability** (voice availability, autoplay/user-gesture constraints) may affect the classroom experience.
 
-3. **No automated test suite**
-   - MVP behavior is implemented, but there are no unit/integration/E2E tests included in the repo.
-
-4. **Production-hardening details are minimal**
-   - PRD asks for simple and reliable MVP (which is mostly done), but robustness around DB policy configuration and runtime observability is not documented in depth.
-
----
-
-## Next Development Steps
-
-Recommended next steps (ordered by impact):
-
-1. **Add lightweight sound feedback for answer results**
-   - Add short local audio assets for success/failure.
-   - Trigger them on correct/incorrect clicks.
-   - Keep TTS flow unchanged.
-
-2. **Add “Personal Best” section**
-   - Query `public.tc_game_scores` by current `player_name` and selected `grid_size`.
-   - Show best time and date to align with PRD competition requirement.
-
-3. **Add basic automated checks**
-   - At minimum: `npm run lint` + `npm run build` in CI.
-   - Optional: simple unit tests for `createRoundGrid` to validate:
-     - one correct answer only
-     - proper grid size
-     - no duplicate correct answer in distractors
-
-4. **Document Supabase policy requirements clearly**
-   - Add a README section for RLS policy examples so inserts/selects work in deployed environments.
-
-5. **Polish UX for classroom use**
-   - Improve mobile/tablet spacing for 5×5 mode.
-   - Consider larger touch targets on smaller screens.
-
----
-
-## Possible Issues
-
-Potential deployment/runtime issues to watch for:
-
-1. **Supabase environment variables missing in hosting platform**
-   - If `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` are not set, score save/read will silently degrade to fallback behavior.
-   - Gameplay still works, but history/leaderboard remain empty.
-
-2. **Supabase RLS/policies may block reads/writes**
-   - Even with correct env vars, if `public.tc_game_scores` policies are not configured for anon key access, inserts/selects fail.
-
-3. **Table/schema mismatch risk**
-   - App is hardcoded to `public.tc_game_scores` and specific columns.
-   - Any manual schema deviation (different table name, missing columns, wrong types) will break leaderboard/history/save.
-
-4. **`gen_random_uuid()` availability**
-   - SQL uses `gen_random_uuid()` default.
-   - In environments where required extension support differs, table creation could fail unless function is available.
-
-5. **Browser TTS variability**
-   - Web Speech API behavior differs across browsers/devices; pronunciation voice/latency may vary.
-   - Some clients may require user interaction before playback works reliably.
-
-6. **Build/registry/network constraints in CI**
-   - If the deployment/build environment cannot access npm registry or has package policy restrictions, install/build can fail before app start.
-
+## Immediate Next Action
+- [ ] Add explicit client save-state handling (`saving/saved/error`) around `saveScore` in `app/page.tsx`.
+- [ ] Disable grid input and action buttons while score save is in progress to avoid duplicate submissions.
+- [ ] Add visible load/error states for history and leaderboard refresh calls.
+- [ ] Verify Supabase RLS policies for anon `insert/select` on `public.tc_game_scores` and document them in `README.md`.
