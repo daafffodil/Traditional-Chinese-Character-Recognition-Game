@@ -17,5 +17,6 @@ export type ScoreRow = {
   target_simplified?: string | null;
   question_type?: 'single_choice' | 'multi_blank' | null;
   blank_count?: number | null;
+  correct_blank_count?: number | null;
   is_correct?: boolean | null;
 };

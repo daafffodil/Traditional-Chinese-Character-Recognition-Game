@@ -23,6 +23,17 @@
   - if Supabase insert/select fails, gameplay continues locally,
   - users get a small helpful message instead of a crash.
 
+- **multi_mapping now tracks `correct_blank_count`** for each record and validates `0 <= correct_blank_count <= blank_count` in save flow.
+- **Accuracy scoring is implemented end-to-end**:
+  - payload stores both `blank_count` and `correct_blank_count`,
+  - UI displays Accuracy as `correct_blank_count / blank_count`,
+  - Perfect column uses `is_correct`.
+- **multi_mapping leaderboard logic updated** to correctness-first ranking:
+  1. perfect answers first,
+  2. higher accuracy,
+  3. higher `correct_blank_count`,
+  4. newer records first.
+
 ## 3. Remaining Gaps / Follow-ups
 - **multi_mapping completion_time currently uses a placeholder value (`0`)**.
   - If product wants timing-based ranking for multi mode, add a dedicated timer model for multi_mapping.
