@@ -6,17 +6,21 @@ export const saveScore = async (playerName: string, gridSize: number, completion
     return { success: false, message: 'Supabase is not configured. Score was not saved.' };
   }
 
-  const { error } = await supabase
-    .schema('public')
-    .from('tc_game_scores')
-    .insert({
-      player_name: playerName || 'Anonymous',
-      grid_size: gridSize,
-      completion_time: completionTime,
-    });
+  try {
+    const { error } = await supabase
+      .schema('public')
+      .from('tc_game_scores')
+      .insert({
+        player_name: playerName || 'Anonymous',
+        grid_size: gridSize,
+        completion_time: completionTime,
+      });
 
-  if (error) {
-    return { success: false, message: `Save failed: ${error.message}` };
+    if (error) {
+      return { success: false, message: `Save failed: ${error.message}` };
+    }
+  } catch {
+    return { success: false, message: 'Save failed due to a network or configuration issue.' };
   }
 
   return { success: true, message: 'Score saved!' };
@@ -27,18 +31,22 @@ export const fetchRecentHistory = async (limit = 8): Promise<ScoreRow[]> => {
     return [];
   }
 
-  const { data, error } = await supabase
-    .schema('public')
-    .from('tc_game_scores')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  try {
+    const { data, error } = await supabase
+      .schema('public')
+      .from('tc_game_scores')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-  if (error || !data) {
+    if (error || !data) {
+      return [];
+    }
+
+    return data;
+  } catch {
     return [];
   }
-
-  return data;
 };
 
 export const fetchLeaderboard = async (gridSize: number, limit = 10): Promise<ScoreRow[]> => {
@@ -46,17 +54,21 @@ export const fetchLeaderboard = async (gridSize: number, limit = 10): Promise<Sc
     return [];
   }
 
-  const { data, error } = await supabase
-    .schema('public')
-    .from('tc_game_scores')
-    .select('*')
-    .eq('grid_size', gridSize)
-    .order('completion_time', { ascending: true })
-    .limit(limit);
+  try {
+    const { data, error } = await supabase
+      .schema('public')
+      .from('tc_game_scores')
+      .select('*')
+      .eq('grid_size', gridSize)
+      .order('completion_time', { ascending: true })
+      .limit(limit);
 
-  if (error || !data) {
+    if (error || !data) {
+      return [];
+    }
+
+    return data;
+  } catch {
     return [];
   }
-
-  return data;
 };
