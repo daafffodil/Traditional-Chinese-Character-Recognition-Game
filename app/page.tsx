@@ -14,6 +14,7 @@ export default function HomePage() {
   const [playerName, setPlayerName] = useState('');
   const [difficulty, setDifficulty] = useState<DifficultyOption>(3);
   const [targetChar, setTargetChar] = useState('');
+  const [questionChar, setQuestionChar] = useState('');
   const [gridCells, setGridCells] = useState<string[]>([]);
   const [status, setStatus] = useState<GameStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('Press start to begin!');
@@ -55,6 +56,7 @@ export default function HomePage() {
     const cells = createRoundGrid(CHARACTER_DATA, difficulty, selected.traditional);
 
     setTargetChar(selected.traditional);
+    setQuestionChar(selected.simplified);
     setGridCells(cells);
     setStatus('playing');
     setStatusMessage('Listen and click the correct Traditional Chinese character!');
@@ -141,8 +143,8 @@ export default function HomePage() {
               {status === 'idle' ? 'Start' : 'Restart / Next Round'}
             </button>
             <button
-              onClick={() => speakCharacter(CHARACTER_DATA.find((entry) => entry.traditional === targetChar)?.simplified ?? '')}
-              disabled={!targetChar}
+              onClick={() => speakCharacter(questionChar)}
+              disabled={!questionChar}
               className="rounded-lg bg-purple-500 px-4 py-2 text-lg text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               Replay Audio
@@ -150,6 +152,9 @@ export default function HomePage() {
           </div>
 
           <p className="text-lg font-semibold text-slate-700">{statusMessage}</p>
+          {questionChar && (
+            <p className="text-lg">Question (Simplified): <span className="text-2xl font-bold">{questionChar}</span></p>
+          )}
 
           {gridCells.length > 0 && (
             <GameGrid

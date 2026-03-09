@@ -1,34 +1,4 @@
+import sourceCharacters from '@/data/dse_core_characters.json';
 import { CharacterItem } from '@/types/game';
 
-export const CHARACTER_DATA: CharacterItem[] = [
-  { simplified: '爱', traditional: '愛', pinyin: 'ai4' },
-  { simplified: '学', traditional: '學', pinyin: 'xue2' },
-  { simplified: '国', traditional: '國', pinyin: 'guo2' },
-  { simplified: '书', traditional: '書', pinyin: 'shu1' },
-  { simplified: '车', traditional: '車', pinyin: 'che1' },
-  { simplified: '门', traditional: '門', pinyin: 'men2' },
-  { simplified: '风', traditional: '風', pinyin: 'feng1' },
-  { simplified: '鱼', traditional: '魚', pinyin: 'yu2' },
-  { simplified: '鸟', traditional: '鳥', pinyin: 'niao3' },
-  { simplified: '云', traditional: '雲', pinyin: 'yun2' },
-  { simplified: '马', traditional: '馬', pinyin: 'ma3' },
-  { simplified: '东', traditional: '東', pinyin: 'dong1' },
-  { simplified: '关', traditional: '關', pinyin: 'guan1' },
-  { simplified: '开', traditional: '開', pinyin: 'kai1' },
-  { simplified: '灯', traditional: '燈', pinyin: 'deng1' },
-  { simplified: '话', traditional: '話', pinyin: 'hua4' },
-  { simplified: '画', traditional: '畫', pinyin: 'hua4' },
-  { simplified: '鸡', traditional: '雞', pinyin: 'ji1' },
-  { simplified: '绿', traditional: '綠', pinyin: 'lv4' },
-  { simplified: '蓝', traditional: '藍', pinyin: 'lan2' },
-  { simplified: '黄', traditional: '黃', pinyin: 'huang2' },
-  { simplified: '里', traditional: '裡', pinyin: 'li3' },
-  { simplified: '医', traditional: '醫', pinyin: 'yi1' },
-  { simplified: '阳', traditional: '陽', pinyin: 'yang2' },
-  { simplified: '阴', traditional: '陰', pinyin: 'yin1' },
-  { simplified: '岛', traditional: '島', pinyin: 'dao3' },
-  { simplified: '麦', traditional: '麥', pinyin: 'mai4' },
-  { simplified: '边', traditional: '邊', pinyin: 'bian1' },
-  { simplified: '宝', traditional: '寶', pinyin: 'bao3' },
-  { simplified: '图', traditional: '圖', pinyin: 'tu2' },
-];
+export const CHARACTER_DATA: CharacterItem[] = sourceCharacters;

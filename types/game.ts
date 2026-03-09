@@ -1,7 +1,6 @@
 export type CharacterItem = {
   simplified: string;
   traditional: string;
-  pinyin: string;
 };
 
 export type DifficultyOption = 3 | 4 | 5;
