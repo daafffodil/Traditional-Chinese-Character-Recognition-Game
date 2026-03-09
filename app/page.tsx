@@ -302,90 +302,204 @@ export default function HomePage() {
 
   const formattedTimer = useMemo(() => formatTime(elapsedMs), [elapsedMs]);
 
+  const multiCorrectCount = useMemo(() => {
+    if (!multiQuestion) {
+      return 0;
+    }
+    return multiQuestion.blanks.reduce(
+      (count, blank, index) => (multiFilledAnswers[index] === blank.answer ? count + 1 : count),
+      0,
+    );
+  }, [multiFilledAnswers, multiQuestion]);
+
+  const feedbackMessage = useMemo(() => {
+    if (mode === 'multi_mapping' && multiQuestion && (multiStatus === 'correct' || multiStatus === 'incorrect')) {
+      return multiStatus === 'correct'
+        ? `✅ Great job! You answered ${multiCorrectCount} / ${multiQuestion.blanks.length} correctly.`
+        : `🌱 Good try! You answered ${multiCorrectCount} / ${multiQuestion.blanks.length} correctly.`;
+    }
+
+    if (mode === 'single_mapping') {
+      if (status === 'correct') {
+        return '✅ Great job! You found the right Traditional character.';
+      }
+      if (status === 'incorrect') {
+        return '🌱 Good try! Keep listening and choose again.';
+      }
+    }
+
+    return '';
+  }, [mode, multiCorrectCount, multiQuestion, multiStatus, status]);
+
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <h1 className="mb-6 text-center text-4xl font-extrabold text-orange-600">
-        Traditional Chinese Character Recognition Game
-      </h1>
-
-      <div className="mb-5 flex flex-wrap items-center gap-2">
-        <span className="text-lg font-semibold">Mode:</span>
-        <button
-          onClick={() => setMode('single_mapping')}
-          className={`rounded-lg px-4 py-2 text-lg font-semibold ${
-            mode === 'single_mapping' ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-900'
-          }`}
-        >
-          single_mapping
-        </button>
-        <button
-          onClick={() => {
-            setMode('multi_mapping');
-            if (!multiQuestion) {
-              startMultiQuestion();
-            }
-          }}
-          className={`rounded-lg px-4 py-2 text-lg font-semibold ${
-            mode === 'multi_mapping' ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-900'
-          }`}
-        >
-          multi_mapping
-        </button>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <section className="space-y-4 rounded-2xl bg-orange-50 p-5 shadow">
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="text-lg font-semibold">Player Name:</label>
-            <input
-              value={playerName}
-              onChange={(event) => setPlayerName(event.target.value)}
-              placeholder="Optional (defaults to Anonymous)"
-              className="rounded-lg border border-orange-200 px-3 py-2 text-lg"
-            />
+    <main className="min-h-screen bg-gradient-to-b from-sky-100 via-orange-50 to-rose-100 px-4 py-8">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <header className="rounded-3xl bg-white/85 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.1)] backdrop-blur-sm">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-3xl font-black tracking-tight text-sky-700 md:text-4xl">🌟 Character Adventure</h1>
+            <p className="rounded-full bg-sky-100 px-4 py-2 text-sm font-semibold text-sky-700">Traditional Chinese Learning Game</p>
           </div>
 
-          {mode === 'single_mapping' ? (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-lg font-semibold">Difficulty:</span>
-                {[3, 4, 5].map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setDifficulty(size as DifficultyOption)}
-                    className={`rounded-lg px-4 py-2 text-lg font-semibold ${
-                      difficulty === size ? 'bg-orange-500 text-white' : 'bg-white'
-                    }`}
-                  >
-                    {size}×{size}
-                  </button>
-                ))}
-              </div>
+          <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
+            <label className="space-y-2">
+              <span className="text-sm font-semibold text-slate-600">Player Name</span>
+              <input
+                value={playerName}
+                onChange={(event) => setPlayerName(event.target.value)}
+                placeholder="Optional (defaults to Anonymous)"
+                className="w-full rounded-2xl border-0 bg-slate-100 px-4 py-3 text-base text-slate-700 shadow-inner outline-none ring-sky-300 transition focus:ring-2"
+              />
+            </label>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="rounded-lg bg-white px-4 py-2 text-xl font-bold">Timer: {formattedTimer}</div>
-                <button onClick={startRound} className="rounded-lg bg-blue-500 px-4 py-2 text-lg text-white">
-                  {status === 'idle' ? 'Start' : 'Restart / Next Round'}
+            <div className="space-y-2">
+              <span className="text-sm font-semibold text-slate-600">Mode</span>
+              <div className="flex rounded-2xl bg-slate-100 p-1">
+                <button
+                  onClick={() => setMode('single_mapping')}
+                  className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition-all ${
+                    mode === 'single_mapping' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  single_mapping
                 </button>
                 <button
-                  onClick={() => speakCharacter(questionChar)}
-                  disabled={!questionChar}
-                  className="rounded-lg bg-purple-500 px-4 py-2 text-lg text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => {
+                    setMode('multi_mapping');
+                    if (!multiQuestion) {
+                      startMultiQuestion();
+                    }
+                  }}
+                  className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition-all ${
+                    mode === 'multi_mapping' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
                 >
-                  Replay Audio
+                  multi_mapping
                 </button>
               </div>
+            </div>
+          </div>
+        </header>
 
-              <p className="text-lg font-semibold text-slate-700">{statusMessage}</p>
-              {connectionHint && <p className="rounded-lg bg-yellow-100 p-3 text-sm text-yellow-900">{connectionHint}</p>}
-              {scoreMessage && <p className="rounded-lg bg-amber-100 p-3 text-sm text-amber-900">{scoreMessage}</p>}
-              {questionChar && (
-                <p className="text-lg">
-                  Question (Simplified): <span className="text-2xl font-bold">{questionChar}</span>
-                </p>
+        <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+          <div className="space-y-6">
+            <section className="rounded-[2rem] bg-white/90 p-6 shadow-[0_20px_55px_rgba(15,23,42,0.12)] backdrop-blur-sm md:p-8">
+              {mode === 'single_mapping' ? (
+                <>
+                  <div className="mb-5 flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-semibold text-slate-600">Difficulty</p>
+                    {[3, 4, 5].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setDifficulty(size as DifficultyOption)}
+                        className={`rounded-full px-4 py-2 text-sm font-bold transition-all active:scale-95 ${
+                          difficulty === size
+                            ? 'bg-sky-500 text-white shadow-[0_10px_20px_rgba(14,165,233,0.35)]'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        {size}×{size}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mb-6 flex flex-wrap gap-3">
+                    <button
+                      onClick={startRound}
+                      className="rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 px-5 py-3 text-base font-bold text-white shadow-[0_14px_30px_rgba(56,189,248,0.35)] transition-all hover:-translate-y-0.5 active:translate-y-0"
+                    >
+                      {status === 'idle' ? 'Start' : 'Restart / Next Round'}
+                    </button>
+                    <button
+                      onClick={() => speakCharacter(questionChar)}
+                      disabled={!questionChar}
+                      className="rounded-2xl bg-white px-5 py-3 text-base font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Replay Audio
+                    </button>
+                    <div className="rounded-2xl bg-slate-100 px-4 py-3 text-base font-semibold text-slate-700">⏱️ {formattedTimer}</div>
+                  </div>
+
+                  <div className="space-y-3 text-center">
+                    <p className="text-sm font-semibold tracking-wide text-slate-500">SIMPLIFIED PROMPT</p>
+                    <p className="text-6xl font-black text-orange-500">{questionChar || '？'}</p>
+                    <p className="text-base font-semibold text-slate-700">{statusMessage}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mb-5 flex flex-wrap gap-3">
+                    <button
+                      onClick={() => startMultiQuestion()}
+                      className="rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 px-5 py-3 text-base font-bold text-white shadow-[0_14px_30px_rgba(56,189,248,0.35)] transition-all hover:-translate-y-0.5 active:translate-y-0"
+                    >
+                      开始多空题
+                    </button>
+                    <button
+                      onClick={resetMultiQuestion}
+                      disabled={!multiQuestion}
+                      className="rounded-2xl bg-white px-5 py-3 text-base font-bold text-amber-600 shadow-sm transition-all hover:bg-amber-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      重置本题
+                    </button>
+                    <button
+                      onClick={() => startMultiQuestion(multiQuestion?.text)}
+                      disabled={!multiQuestion}
+                      className="rounded-2xl bg-white px-5 py-3 text-base font-bold text-emerald-600 shadow-sm transition-all hover:bg-emerald-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      下一题
+                    </button>
+                  </div>
+
+                  <div className="mb-5 space-y-2 text-center">
+                    <p className="text-sm font-semibold tracking-wide text-slate-500">SIMPLIFIED PROMPT</p>
+                    <p className="text-5xl font-black text-orange-500">{multiQuestion?.simplified ?? '？'}</p>
+                    <p className="text-base font-semibold text-slate-700">{multiStatusMessage}</p>
+                  </div>
+
+                  {multiQuestion && (
+                    <div className="rounded-3xl bg-gradient-to-br from-slate-50 to-white p-5 text-3xl leading-relaxed">
+                      {multiSentenceParts.map((part, index) => {
+                        const hasBlank = index < multiQuestion.blanks.length;
+                        const filledValue = multiFilledAnswers[index];
+                        const isActive = currentBlankIndex === index && multiStatus === 'playing';
+                        const isFilled = Boolean(filledValue);
+                        const isCorrect = filledValue && filledValue === multiQuestion.blanks[index]?.answer;
+
+                        const blankClass = isActive
+                          ? 'border-sky-400 bg-sky-100 text-sky-900 shadow-sm'
+                          : isFilled && multiStatus !== 'playing'
+                            ? isCorrect
+                              ? 'border-emerald-300 bg-emerald-100 text-emerald-900'
+                              : 'border-rose-300 bg-rose-100 text-rose-900'
+                            : isFilled
+                              ? 'border-indigo-300 bg-indigo-100 text-indigo-900'
+                              : 'border-slate-200 bg-slate-100 text-slate-500';
+
+                        return (
+                          <span key={`${part}-${index}`}>
+                            {part}
+                            {hasBlank && (
+                              <span
+                                className={`mx-1 inline-flex min-w-16 justify-center rounded-xl border-2 px-3 py-1.5 font-black transition-all ${blankClass}`}
+                              >
+                                {filledValue ?? '＿'}
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
               )}
 
-              {gridCells.length > 0 && (
+              {connectionHint && <p className="mt-4 rounded-2xl bg-yellow-100 p-3 text-sm text-yellow-900">{connectionHint}</p>}
+              {scoreMessage && <p className="mt-4 rounded-2xl bg-amber-100 p-3 text-sm text-amber-900">{scoreMessage}</p>}
+            </section>
+
+            {mode === 'single_mapping' && gridCells.length > 0 && (
+              <section>
+                <h2 className="mb-3 text-lg font-extrabold text-slate-700">Answer Buttons</h2>
                 <GameGrid
                   cells={gridCells}
                   gridSize={difficulty}
@@ -394,103 +508,66 @@ export default function HomePage() {
                   status={status}
                   onCellClick={onCellClick}
                 />
-              )}
-            </>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-3">
-                <button onClick={() => startMultiQuestion()} className="rounded-lg bg-blue-500 px-4 py-2 text-lg text-white">
-                  开始多空题
-                </button>
-                <button
-                  onClick={resetMultiQuestion}
-                  disabled={!multiQuestion}
-                  className="rounded-lg bg-amber-500 px-4 py-2 text-lg text-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  重置本题
-                </button>
-                <button
-                  onClick={() => startMultiQuestion(multiQuestion?.text)}
-                  disabled={!multiQuestion}
-                  className="rounded-lg bg-green-600 px-4 py-2 text-lg text-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  下一题
-                </button>
-              </div>
+              </section>
+            )}
 
-              <p className="text-xl font-semibold text-slate-800">{multiStatusMessage}</p>
-              {scoreMessage && <p className="rounded-lg bg-amber-100 p-3 text-sm text-amber-900">{scoreMessage}</p>}
-              {connectionHint && <p className="rounded-lg bg-yellow-100 p-3 text-sm text-yellow-900">{connectionHint}</p>}
+            {mode === 'multi_mapping' && multiQuestion && (
+              <section>
+                <h2 className="mb-3 text-lg font-extrabold text-slate-700">Answer Buttons</h2>
+                <div className="flex flex-wrap gap-3 rounded-3xl bg-white/80 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+                  {multiQuestion.options.map((option) => {
+                    const isSelected = multiFilledAnswers.includes(option);
 
-              {multiQuestion && (
-                <>
-                  <p className="text-2xl font-bold">
-                    简体提示：<span className="text-3xl text-orange-700">{multiQuestion.simplified}</span>
-                  </p>
-
-                  <div className="rounded-xl bg-white p-4 text-2xl leading-loose">
-                    {multiSentenceParts.map((part, index) => {
-                      const hasBlank = index < multiQuestion.blanks.length;
-                      const filledValue = multiFilledAnswers[index];
-
-                      return (
-                        <span key={`${part}-${index}`}>
-                          {part}
-                          {hasBlank && (
-                            <span
-                              className={`mx-1 inline-flex min-w-14 justify-center rounded-md border-2 px-2 py-1 font-bold ${
-                                currentBlankIndex === index && multiStatus === 'playing'
-                                  ? 'border-orange-500 bg-orange-100'
-                                  : 'border-slate-300 bg-slate-100'
-                              }`}
-                            >
-                              {filledValue ?? '＿'}
-                            </span>
-                          )}
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    {multiQuestion.options.map((option) => (
+                    return (
                       <button
                         key={option}
                         onClick={() => onMultiOptionClick(option)}
                         disabled={multiStatus !== 'playing'}
-                        className="rounded-lg bg-purple-500 px-5 py-3 text-2xl font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`rounded-2xl px-6 py-4 text-3xl font-black transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                          isSelected
+                            ? 'bg-indigo-500 text-white shadow-[0_10px_20px_rgba(79,70,229,0.35)]'
+                            : 'bg-gradient-to-b from-white to-indigo-50 text-indigo-700 shadow-sm hover:-translate-y-0.5 hover:shadow-md'
+                        }`}
                       >
                         {option}
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
-                  {multiStatus !== 'playing' && multiExplanation && (
-                    <p className="rounded-lg bg-emerald-100 p-3 text-lg text-emerald-900">解析：{multiExplanation}</p>
-                  )}
-                </>
-              )}
-            </>
-          )}
+            {(feedbackMessage || (multiStatus !== 'playing' && multiExplanation)) && (
+              <section className="rounded-3xl bg-white/90 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+                <h2 className="mb-2 text-lg font-extrabold text-slate-700">Feedback Card</h2>
+                {feedbackMessage && <p className="text-base font-semibold text-slate-700">{feedbackMessage}</p>}
+                {multiStatus !== 'playing' && multiExplanation && (
+                  <p className="mt-3 rounded-2xl bg-emerald-100 p-3 text-base text-emerald-900">解析：{multiExplanation}</p>
+                )}
+              </section>
+            )}
+          </div>
+
+          <aside className="space-y-5">
+            {!isSupabaseConfigured && (
+              <div className="rounded-3xl bg-yellow-100 p-4 text-sm text-yellow-800 shadow-[0_14px_35px_rgba(202,138,4,0.15)]">
+                Supabase is not configured. Gameplay still works locally, but score saving is disabled.
+              </div>
+            )}
+            <section>
+              <h2 className="mb-3 text-lg font-extrabold text-slate-700">History Section</h2>
+              <ScoreTable title="Recent History" scores={history} gameMode={mode} />
+            </section>
+            <section>
+              <h2 className="mb-3 text-lg font-extrabold text-slate-700">Accuracy Leaderboard</h2>
+              <ScoreTable
+                title={mode === 'multi_mapping' ? 'Accuracy Leaderboard' : `Leaderboard (${difficulty}×${difficulty})`}
+                scores={leaderboard}
+                gameMode={mode}
+              />
+            </section>
+          </aside>
         </section>
-
-        <aside className="space-y-4">
-          {!isSupabaseConfigured && (
-            <div className="rounded-2xl bg-yellow-100 p-4 text-sm text-yellow-800 shadow">
-              Supabase is not configured. Gameplay still works locally, but score saving is disabled.
-            </div>
-          )}
-          <ScoreTable
-            title="Recent History"
-            scores={history}
-            gameMode={mode}
-          />
-          <ScoreTable
-            title={mode === 'multi_mapping' ? 'Accuracy Leaderboard' : `Leaderboard (${difficulty}×${difficulty})`}
-            scores={leaderboard}
-            gameMode={mode}
-          />
-        </aside>
       </div>
     </main>
   );

@@ -3,9 +3,10 @@
 @tailwind utilities;
 
 body {
-  @apply bg-peach text-slate-800;
+  @apply text-slate-800 antialiased;
 }
 
-button {
-  @apply transition-colors;
+button,
+input {
+  @apply transition-all duration-200;
 }
