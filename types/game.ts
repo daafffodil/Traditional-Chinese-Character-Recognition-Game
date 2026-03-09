@@ -13,4 +13,9 @@ export type ScoreRow = {
   grid_size: number;
   completion_time: number;
   created_at: string;
+  game_mode?: 'single_mapping' | 'multi_mapping';
+  target_simplified?: string | null;
+  question_type?: 'single_choice' | 'multi_blank' | null;
+  blank_count?: number | null;
+  is_correct?: boolean | null;
 };
