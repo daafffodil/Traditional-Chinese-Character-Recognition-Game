@@ -4,261 +4,108 @@
 Traditional Chinese Character Recognition Game
 
 ## Version
-MVP v1.0
+MVP v1.1
 
 ## Target Users
-Primary school students who need to learn or recognize Traditional Chinese characters.
+Primary school students learning to recognize Traditional Chinese characters.
 
 ## Product Goal
-Help students improve their ability to recognize Traditional Chinese characters through an interactive game.
-
-The product combines:
-- Listening recognition
-- Visual search
-- Reaction speed training
-
-The game should be simple, intuitive, and suitable for classroom use.
+Help students build Traditional Chinese character recognition through a simple, repeatable game loop that is suitable for classroom and after-class practice.
 
 ---
 
-# Core Gameplay
+## Learning Modes
 
-## Game Concept
+The product roadmap defines two learning modes:
 
-The system plays the pronunciation of a Chinese character.
+### Mode 1 (Current MVP Scope): One-to-One Mapping
+- Learner sees a **simplified Chinese character** prompt.
+- Learner chooses the matching **single traditional Chinese character** from a grid.
+- This mode focuses on direct simplified-to-traditional mapping where one simplified character maps to one primary traditional form in the dataset.
 
-Students must quickly find and click the **correct Traditional Chinese character** from a grid of characters.
-
-Only one character in the grid is correct.
-
-Other characters act as distractors.
+### Mode 2 (Future Scope): One-to-Many Mapping with Context
+- Learner handles cases where one simplified character maps to **multiple traditional forms**.
+- The game provides a sentence/context prompt so the learner picks the correct traditional character by meaning and usage.
+- This mode is **not included in MVP** and is planned for a later phase.
 
 ---
 
-# Game Flow
+## MVP Gameplay (Mode 1)
 
-## Step 1: Play Audio
+### Round Flow
+1. Show a simplified Chinese character.
+2. Show a grid of traditional Chinese character options (e.g., 3×3, 4×4, 5×5).
+3. Player clicks the correct traditional Chinese character.
+4. Timer records completion time from round start until correct click.
+5. Save score/history to Supabase.
 
-The system plays the pronunciation of a character.
+### Feedback
+- Correct click: reward sound + visual correct state.
+- Incorrect click: error sound + visual incorrect state.
+
+---
+
+## UI Layout
+
+### Left Panel
+- Timer (current round time)
+
+### Center Area
+- Traditional character option grid
+
+### Bottom Area
+- Difficulty controls (3×3 / 4×4 / 5×5)
+
+---
+
+## Data Scope (MVP)
+
+### Character Dataset
+- Character mapping dataset remains **local in code** for MVP.
+- Dataset includes simplified character, traditional character, and optional pinyin.
 
 Example:
-
-爱 (ài)
-
-The pronunciation can be generated using Text-to-Speech.
-
----
-
-## Step 2: Display Character Grid
-
-The screen displays a grid of Traditional Chinese characters.
-
-The grid size can be selected:
-
-- 3 × 3 (Easy)
-- 4 × 4 (Medium)
-- 5 × 5 (Hard)
-
-Example grid:
-
-愛   曖   受  
-爲   爭   亂  
-學   覺   觀  
-
-Only one character is the correct answer.
-
----
-
-## Step 3: Student Clicks Answer
-
-The student clicks the character they believe is correct.
-
-Example:
-
-Audio: 爱
-
-Correct answer: 愛
-
----
-
-## Step 4: Feedback
-
-### Correct Answer
-
-- Play reward sound
-- The correct character turns green
-
-### Wrong Answer
-
-- Play error sound
-- The clicked character turns red
-
----
-
-# UI Layout
-
-The interface should contain three main areas.
-
-## Left Panel
-
-Timer
-
-Shows the current game time.
-
-Example:
-
-00:12
-
----
-
-## Center Area
-
-Character grid
-
-Displays the Traditional Chinese characters.
-
----
-
-## Bottom Area
-
-Difficulty selection
-
-Buttons:
-
-3×3  
-4×4  
-5×5
-
----
-
-# Game Timer
-
-A timer starts when the round begins.
-
-The timer stops when the correct character is selected.
-
-The final time is recorded.
-
----
-
-# Game History
-
-The system stores previous results.
-
-Each record includes:
-
-- Date
-- Grid size
-- Completion time
-
-Example:
-
-| Date | Grid | Time |
-|-----|-----|-----|
-| 2026-03-09 | 3×3 | 10s |
-| 2026-03-09 | 4×4 | 15s |
-
----
-
-# Competition Feature
-
-Students can compare scores.
-
-Two comparison modes:
-
-### Personal Best
-
-Students can try to beat their own best time.
-
-### Classroom Competition
-
-Multiple students can compare times in a leaderboard.
-
-Example:
-
-| Rank | Name | Time |
-|-----|-----|-----|
-| 1 | Student A | 8s |
-| 2 | Student B | 10s |
-| 3 | Student C | 12s |
-
----
-
-# Character Data
-
-The game requires a simplified-to-traditional character mapping.
-
-Example dataset:
 
 | Simplified | Traditional | Pinyin |
-|-----------|-------------|-------|
+|---|---|---|
 | 爱 | 愛 | ai4 |
 | 学 | 學 | xue2 |
 | 国 | 國 | guo2 |
-| 书 | 書 | shu1 |
-| 车 | 車 | che1 |
 
-The system randomly selects characters from this dataset.
-
----
-
-# Grid Generation Logic
-
-When a round starts:
-
-1. Select a random simplified character
-2. Find its Traditional equivalent
-3. Place the correct Traditional character in the grid
-4. Fill remaining cells with random Traditional characters from the dataset
-5. Shuffle the grid
+### Database Usage (MVP)
+- Supabase is used **only** for score/history storage in MVP.
+- Character mapping is **not** stored in database in MVP.
 
 ---
 
-# Audio System
-
-The system should generate pronunciation audio using TTS.
-
-Possible implementation:
-
-Web Speech API
+## Grid Generation Logic (Mode 1)
+1. Randomly pick a simplified character from local dataset.
+2. Read its corresponding traditional character.
+3. Place correct traditional character into grid.
+4. Fill remaining grid cells with random traditional distractors.
+5. Shuffle grid positions.
 
 ---
 
-# Basic Technology Stack
+## Audio
+- Pronunciation can be played via TTS (e.g., Web Speech API) as an assistive cue.
 
-Recommended stack for MVP:
+---
 
-Frontend:
+## Technology (MVP)
+
+### Frontend
 - React
 - Next.js
 
-Backend:
-- Supabase (for storing scores and history)
+### Backend
+- Supabase (scores/history only)
 
-Database tables:
+### Database Table (MVP)
 
-scores
-characters
-
----
-
-# Database Design
-
-## characters table
-
+#### scores
 | field | type |
-|-----|-----|
-| id | integer |
-| simplified | text |
-| traditional | text |
-| pinyin | text |
-
----
-
-## scores table
-
-| field | type |
-|-----|-----|
+|---|---|
 | id | integer |
 | player_name | text |
 | grid_size | integer |
@@ -267,38 +114,34 @@ characters
 
 ---
 
-# MVP Scope
+## MVP Scope Summary
+Included in MVP:
+- Mode 1 one-to-one mapping gameplay
+- Character prompt + traditional grid selection
+- Timer and completion time tracking
+- Correct/incorrect feedback
+- Score/history persistence to Supabase
 
-Version 1 only includes:
-
-- Character audio playback
-- Character grid
-- Click recognition
-- Correct / incorrect feedback
-- Timer
-- Game history
-- Leaderboard
-
-Advanced game mechanics will be added in future versions.
+Not included in MVP:
+- Mode 2 one-to-many context-based gameplay
+- Sentence fill-in and contextual disambiguation system
 
 ---
 
-# Future Features (Not in MVP)
+## Future Phase (Post-MVP)
 
-- Combo system
-- Achievement system
-- Daily challenges
-- Memory mode
+### Mode 2: Context-Based Sentence Fill-in
+For one-to-many mappings, players complete sentence/context tasks and choose the correct traditional character based on meaning and usage.
+
+Possible additions:
 - Adaptive difficulty
+- Daily challenges
+- Achievement system
+- Learning progress analytics
 
 ---
 
-# Success Criteria
-
-Students should be able to:
-
-- Understand the gameplay within 10 seconds
-- Complete a round within 30 seconds
-- Replay the game multiple times
-
-The game should be simple, fast, and engaging.
+## Success Criteria
+- Students understand Mode 1 gameplay within 10 seconds.
+- Students can complete a round within 30 seconds.
+- Students replay multiple rounds for practice.
