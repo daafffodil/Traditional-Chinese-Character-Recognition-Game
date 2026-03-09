@@ -29,6 +29,11 @@ const getConnectionHint = (message: string) => {
     return '连接诊断：数据库权限不足。请确认使用的 Key 有权限写入 public.tc_game_scores。';
   }
 
+
+  if (lowerMessage.includes('invalid authentication credentials') || lowerMessage.includes('jwt') || lowerMessage.includes('invalid api key')) {
+    return '连接诊断：Key 无效（Invalid authentication credentials）。请检查 .env 中的 SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY 是否来自同一个 Supabase 项目。';
+  }
+
   return '连接诊断：写入失败。请检查 Supabase 项目 URL/Key、表名 public.tc_game_scores、以及表字段是否为 player_name/grid_size/completion_time。';
 };
 
