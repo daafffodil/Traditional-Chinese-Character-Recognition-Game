@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
     });
 
   if (error) {
+    console.error('[api/scores] Insert failed:', error);
     return NextResponse.json({ success: false, message: `Save failed: ${error.message}` }, { status: 500 });
   }
 

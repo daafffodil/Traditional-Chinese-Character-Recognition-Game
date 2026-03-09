@@ -78,6 +78,63 @@ export default function HomePage() {
     setLeaderboard(leaderboardData);
   }, [difficulty, mode]);
 
+  const persistScore = useCallback(
+    async ({
+      completionTime,
+      gameMode,
+      targetSimplified,
+      questionType,
+      blankCount,
+      isCorrect,
+      gridSize,
+      successMessage,
+      failureMessage,
+      setModeStatusMessage,
+    }: {
+      completionTime: number;
+      gameMode: GameMode;
+      targetSimplified: string;
+      questionType: 'single_choice' | 'multi_blank';
+      blankCount: number;
+      isCorrect: boolean;
+      gridSize: number;
+      successMessage?: string;
+      failureMessage: string;
+      setModeStatusMessage?: (message: string) => void;
+    }) => {
+      const normalizedPlayerName = playerName.trim() || 'Anonymous';
+      const result = await saveScore({
+        playerName: normalizedPlayerName,
+        gridSize,
+        completionTime,
+        gameMode,
+        targetSimplified,
+        questionType,
+        blankCount,
+        isCorrect,
+      });
+
+      if (!result.success) {
+        console.error('[scores] Failed to save score:', result.message);
+        const errorHint = getConnectionHint(result.message);
+        setConnectionHint(errorHint);
+        setScoreMessage(failureMessage);
+        if (setModeStatusMessage) {
+          setModeStatusMessage(failureMessage);
+        }
+        return;
+      }
+
+      setConnectionHint('');
+      setScoreMessage('');
+      if (successMessage && setModeStatusMessage) {
+        setModeStatusMessage(successMessage);
+      }
+      await loadScorePanels();
+    },
+    [loadScorePanels, playerName],
+  );
+
   useEffect(() => {
     void loadScorePanels();
   }, [loadScorePanels]);
@@ -135,8 +192,7 @@ export default function HomePage() {
       setStatus('correct');
       setStatusMessage(`Great job! Time: ${completionTime}s`);
 
-      const result = await saveScore({
-        playerName: playerName.trim(),
+      await persistScore({
         gridSize: difficulty,
         completionTime,
         gameMode: 'single_mapping',
@@ -144,18 +200,10 @@ export default function HomePage() {
         questionType: 'single_choice',
         blankCount: 1,
         isCorrect: true,
+        successMessage: `Great job! Time: ${completionTime}s. Score saved.`,
+        failureMessage: `Great job! Time: ${completionTime}s. 已完成本局，暂时无法同步到云端，游戏可继续进行。`,
+        setModeStatusMessage: setStatusMessage,
       });
-      if (result.success) {
-        setStatusMessage(`Great job! Time: ${completionTime}s. Score saved.`);
-        setConnectionHint('');
-        setScoreMessage('');
-      } else {
-        setStatusMessage(`Great job! Time: ${completionTime}s. ${result.message}`);
-        setConnectionHint(getConnectionHint(result.message));
-        setScoreMessage('已完成本局，暂时无法同步到云端，游戏可继续进行。');
-      }
-
-      await loadScorePanels();
       return;
     }
 
@@ -197,25 +245,16 @@ export default function HomePage() {
       setMultiStatusMessage('有些空格还不对，按「重置本题」再试一次。');
     }
 
-    const result = await saveScore({
-      playerName: playerName.trim(),
-      gridSize: multiQuestion.blanks.length,
+    await persistScore({
+      gridSize: difficulty,
       completionTime: 0,
       gameMode: 'multi_mapping',
       targetSimplified: multiQuestion.simplified,
       questionType: 'multi_blank',
       blankCount: multiQuestion.blanks.length,
       isCorrect: isAllCorrect,
+      failureMessage: '多空题结果已在本地完成判定，云端保存暂时失败。',
     });
-
-    if (!result.success) {
-      setConnectionHint(getConnectionHint(result.message));
-      setScoreMessage('多空题结果已在本地完成判定，云端保存暂时失败。');
-    } else {
-      setScoreMessage('');
-      setConnectionHint('');
-      await loadScorePanels();
-    }
   };
 
   const resetMultiQuestion = () => {
@@ -285,18 +324,18 @@ export default function HomePage() {
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="space-y-4 rounded-2xl bg-orange-50 p-5 shadow">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-lg font-semibold">Player Name:</label>
+            <input
+              value={playerName}
+              onChange={(event) => setPlayerName(event.target.value)}
+              placeholder="Optional (defaults to Anonymous)"
+              className="rounded-lg border border-orange-200 px-3 py-2 text-lg"
+            />
+          </div>
+
           {mode === 'single_mapping' ? (
             <>
-              <div className="flex flex-wrap items-center gap-3">
-                <label className="text-lg font-semibold">Player Name:</label>
-                <input
-                  value={playerName}
-                  onChange={(event) => setPlayerName(event.target.value)}
-                  placeholder="Optional"
-                  className="rounded-lg border border-orange-200 px-3 py-2 text-lg"
-                />
-              </div>
-
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-lg font-semibold">Difficulty:</span>
                 {[3, 4, 5].map((size) => (
