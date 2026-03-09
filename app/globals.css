@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-peach text-slate-800;
+}
+
+button {
+  @apply transition-colors;
+}
