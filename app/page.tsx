@@ -14,6 +14,15 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 type GameMode = 'single_mapping' | 'multi_mapping';
 type MultiMappingStatus = 'idle' | 'playing' | 'correct' | 'incorrect';
 
+const truncateDisplayName = (name: string) => {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return '匿名';
+  }
+
+  return trimmed.length > 8 ? `${trimmed.slice(0, 4)}…` : trimmed;
+};
+
 const getConnectionHint = (message: string) => {
   const lowerMessage = message.toLowerCase();
 
@@ -51,7 +60,7 @@ export default function HomePage() {
   const [questionChar, setQuestionChar] = useState('');
   const [gridCells, setGridCells] = useState<string[]>([]);
   const [status, setStatus] = useState<GameStatus>('idle');
-  const [statusMessage, setStatusMessage] = useState('Press start to begin!');
+  const [statusMessage, setStatusMessage] = useState('点击「开始游戏」，听读音并选出正确繁体字。');
   const [connectionHint, setConnectionHint] = useState('');
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -61,7 +70,7 @@ export default function HomePage() {
   const [multiFilledAnswers, setMultiFilledAnswers] = useState<(string | null)[]>([]);
   const [currentBlankIndex, setCurrentBlankIndex] = useState(0);
   const [multiStatus, setMultiStatus] = useState<MultiMappingStatus>('idle');
-  const [multiStatusMessage, setMultiStatusMessage] = useState('按「开始多空题」来挑战吧！');
+  const [multiStatusMessage, setMultiStatusMessage] = useState('点击「开始游戏」，准备挑战一简对多。');
 
   const [history, setHistory] = useState<ScoreRow[]>([]);
   const [leaderboard, setLeaderboard] = useState<ScoreRow[]>([]);
@@ -104,7 +113,7 @@ export default function HomePage() {
       failureMessage: string;
       setModeStatusMessage?: (message: string) => void;
     }) => {
-      const normalizedPlayerName = playerName.trim() || 'Anonymous';
+      const normalizedPlayerName = playerName.trim() || '匿名';
       const result = await saveScore({
         playerName: normalizedPlayerName,
         gridSize,
@@ -162,7 +171,7 @@ export default function HomePage() {
     setQuestionChar(selected.simplified);
     setGridCells(cells);
     setStatus('playing');
-    setStatusMessage('Listen and click the correct Traditional Chinese character!');
+    setStatusMessage('请听读音，点选正确的繁体字。');
     setConnectionHint('');
     setSelectedCell(null);
     setStartTime(Date.now());
@@ -193,7 +202,7 @@ export default function HomePage() {
 
       setElapsedMs(finishedMs);
       setStatus('correct');
-      setStatusMessage(`Great job! Time: ${completionTime}s`);
+      setStatusMessage(`太棒了！用时 ${completionTime} 秒。`);
 
       await persistScore({
         gridSize: difficulty,
@@ -204,20 +213,20 @@ export default function HomePage() {
         blankCount: 1,
         correctBlankCount: 1,
         isCorrect: true,
-        successMessage: `Great job! Time: ${completionTime}s. Score saved.`,
-        failureMessage: `Great job! Time: ${completionTime}s. 已完成本局，暂时无法同步到云端，游戏可继续进行。`,
+        successMessage: `太棒了！用时 ${completionTime} 秒，成绩已保存。`,
+        failureMessage: `太棒了！用时 ${completionTime} 秒。已完成本局，暂时无法同步到云端，游戏可继续进行。`,
         setModeStatusMessage: setStatusMessage,
       });
       return;
     }
 
     setStatus('incorrect');
-    setStatusMessage('Oops! Try again.');
+    setStatusMessage('再试一次！');
 
     window.setTimeout(() => {
       setStatus('playing');
       setSelectedCell(null);
-      setStatusMessage('Keep trying!');
+      setStatusMessage('继续尝试，你快成功了！');
     }, 450);
   };
 
@@ -279,6 +288,19 @@ export default function HomePage() {
     setMultiStatusMessage('已重置，请从第一个空格开始。');
   };
 
+  const resetSingleRound = () => {
+    if (!questionChar) {
+      return;
+    }
+
+    setStatus('playing');
+    setSelectedCell(null);
+    setStartTime(Date.now());
+    setElapsedMs(0);
+    setStatusMessage('已重置本题，请重新作答。');
+    speakCharacter(questionChar);
+  };
+
   const multiSentenceParts = useMemo(() => {
     if (!multiQuestion) {
       return [];
@@ -315,16 +337,16 @@ export default function HomePage() {
   const feedbackMessage = useMemo(() => {
     if (mode === 'multi_mapping' && multiQuestion && (multiStatus === 'correct' || multiStatus === 'incorrect')) {
       return multiStatus === 'correct'
-        ? `✅ Great job! You answered ${multiCorrectCount} / ${multiQuestion.blanks.length} correctly.`
-        : `🌱 Good try! You answered ${multiCorrectCount} / ${multiQuestion.blanks.length} correctly.`;
+        ? `太棒了！本题答对 ${multiCorrectCount}/${multiQuestion.blanks.length}。`
+        : `再试一次！目前答对 ${multiCorrectCount}/${multiQuestion.blanks.length}。`;
     }
 
     if (mode === 'single_mapping') {
       if (status === 'correct') {
-        return '✅ Great job! You found the right Traditional character.';
+        return '太棒了！你选对了繁体字。';
       }
       if (status === 'incorrect') {
-        return '🌱 Good try! Keep listening and choose again.';
+        return '再听一次，继续挑战！';
       }
     }
 
@@ -332,27 +354,13 @@ export default function HomePage() {
   }, [mode, multiCorrectCount, multiQuestion, multiStatus, status]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-sky-100 via-orange-50 to-rose-100 px-4 py-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header className="rounded-3xl bg-white/85 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.1)] backdrop-blur-sm">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-3xl font-black tracking-tight text-sky-700 md:text-4xl">🌟 Character Adventure</h1>
-            <p className="rounded-full bg-sky-100 px-4 py-2 text-sm font-semibold text-sky-700">Traditional Chinese Learning Game</p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-600">Player Name</span>
-              <input
-                value={playerName}
-                onChange={(event) => setPlayerName(event.target.value)}
-                placeholder="Optional (defaults to Anonymous)"
-                className="w-full rounded-2xl border-0 bg-slate-100 px-4 py-3 text-base text-slate-700 shadow-inner outline-none ring-sky-300 transition focus:ring-2"
-              />
-            </label>
-
-            <div className="space-y-2">
-              <span className="text-sm font-semibold text-slate-600">Mode</span>
+    <main className="min-h-screen bg-gradient-to-b from-sky-100 via-orange-50 to-rose-100 px-4 py-4 md:py-6">
+      <div className="mx-auto max-w-4xl space-y-5">
+        <header className="rounded-3xl bg-white/85 px-4 py-3 shadow-[0_14px_36px_rgba(15,23,42,0.1)] backdrop-blur-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-2xl font-black tracking-tight text-sky-700 md:text-3xl">繁体字挑战</h1>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-slate-500">模式切换</p>
               <div className="flex rounded-2xl bg-slate-100 p-1">
                 <button
                   onClick={() => setMode('single_mapping')}
@@ -360,33 +368,44 @@ export default function HomePage() {
                     mode === 'single_mapping' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  single_mapping
+                  简繁对应
                 </button>
                 <button
                   onClick={() => {
                     setMode('multi_mapping');
-                    if (!multiQuestion) {
-                      startMultiQuestion();
-                    }
                   }}
                   className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition-all ${
                     mode === 'multi_mapping' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  multi_mapping
+                  一简对多
                 </button>
               </div>
             </div>
           </div>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <div className="space-y-6">
-            <section className="rounded-[2rem] bg-white/90 p-6 shadow-[0_20px_55px_rgba(15,23,42,0.12)] backdrop-blur-sm md:p-8">
+        <section className="space-y-5">
+          <section className="rounded-[2rem] bg-white/90 p-5 shadow-[0_20px_55px_rgba(15,23,42,0.12)] backdrop-blur-sm md:p-7">
+            <div className="mb-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+              <label className="space-y-2">
+                <span className="text-sm font-semibold text-slate-600">玩家名称</span>
+                <input
+                  value={playerName}
+                  onChange={(event) => setPlayerName(event.target.value)}
+                  placeholder="不填将显示为匿名"
+                  className="w-full rounded-2xl border-0 bg-slate-100 px-4 py-3 text-base text-slate-700 shadow-inner outline-none ring-sky-300 transition focus:ring-2"
+                />
+              </label>
+              <div className="rounded-2xl bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700">
+                当前玩家：{truncateDisplayName(playerName)}
+              </div>
+            </div>
+
               {mode === 'single_mapping' ? (
                 <>
                   <div className="mb-5 flex flex-wrap items-center gap-3">
-                    <p className="text-sm font-semibold text-slate-600">Difficulty</p>
+                    <p className="text-sm font-semibold text-slate-600">难度</p>
                     {[3, 4, 5].map((size) => (
                       <button
                         key={size}
@@ -402,56 +421,16 @@ export default function HomePage() {
                     ))}
                   </div>
 
-                  <div className="mb-6 flex flex-wrap gap-3">
-                    <button
-                      onClick={startRound}
-                      className="rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 px-5 py-3 text-base font-bold text-white shadow-[0_14px_30px_rgba(56,189,248,0.35)] transition-all hover:-translate-y-0.5 active:translate-y-0"
-                    >
-                      {status === 'idle' ? 'Start' : 'Restart / Next Round'}
-                    </button>
-                    <button
-                      onClick={() => speakCharacter(questionChar)}
-                      disabled={!questionChar}
-                      className="rounded-2xl bg-white px-5 py-3 text-base font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Replay Audio
-                    </button>
-                    <div className="rounded-2xl bg-slate-100 px-4 py-3 text-base font-semibold text-slate-700">⏱️ {formattedTimer}</div>
-                  </div>
-
                   <div className="space-y-3 text-center">
-                    <p className="text-sm font-semibold tracking-wide text-slate-500">SIMPLIFIED PROMPT</p>
+                    <p className="text-sm font-semibold tracking-wide text-slate-500">简体提示</p>
                     <p className="text-6xl font-black text-orange-500">{questionChar || '？'}</p>
                     <p className="text-base font-semibold text-slate-700">{statusMessage}</p>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="mb-5 flex flex-wrap gap-3">
-                    <button
-                      onClick={() => startMultiQuestion()}
-                      className="rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 px-5 py-3 text-base font-bold text-white shadow-[0_14px_30px_rgba(56,189,248,0.35)] transition-all hover:-translate-y-0.5 active:translate-y-0"
-                    >
-                      开始多空题
-                    </button>
-                    <button
-                      onClick={resetMultiQuestion}
-                      disabled={!multiQuestion}
-                      className="rounded-2xl bg-white px-5 py-3 text-base font-bold text-amber-600 shadow-sm transition-all hover:bg-amber-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      重置本题
-                    </button>
-                    <button
-                      onClick={() => startMultiQuestion(multiQuestion?.text)}
-                      disabled={!multiQuestion}
-                      className="rounded-2xl bg-white px-5 py-3 text-base font-bold text-emerald-600 shadow-sm transition-all hover:bg-emerald-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      下一题
-                    </button>
-                  </div>
-
                   <div className="mb-5 space-y-2 text-center">
-                    <p className="text-sm font-semibold tracking-wide text-slate-500">SIMPLIFIED PROMPT</p>
+                    <p className="text-sm font-semibold tracking-wide text-slate-500">简体提示</p>
                     <p className="text-5xl font-black text-orange-500">{multiQuestion?.simplified ?? '？'}</p>
                     <p className="text-base font-semibold text-slate-700">{multiStatusMessage}</p>
                   </div>
@@ -495,11 +474,11 @@ export default function HomePage() {
 
               {connectionHint && <p className="mt-4 rounded-2xl bg-yellow-100 p-3 text-sm text-yellow-900">{connectionHint}</p>}
               {scoreMessage && <p className="mt-4 rounded-2xl bg-amber-100 p-3 text-sm text-amber-900">{scoreMessage}</p>}
-            </section>
+          </section>
 
             {mode === 'single_mapping' && gridCells.length > 0 && (
               <section>
-                <h2 className="mb-3 text-lg font-extrabold text-slate-700">Answer Buttons</h2>
+                <h2 className="mb-3 text-lg font-extrabold text-slate-700">作答区</h2>
                 <GameGrid
                   cells={gridCells}
                   gridSize={difficulty}
@@ -513,7 +492,7 @@ export default function HomePage() {
 
             {mode === 'multi_mapping' && multiQuestion && (
               <section>
-                <h2 className="mb-3 text-lg font-extrabold text-slate-700">Answer Buttons</h2>
+                <h2 className="mb-3 text-lg font-extrabold text-slate-700">作答区</h2>
                 <div className="flex flex-wrap gap-3 rounded-3xl bg-white/80 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
                   {multiQuestion.options.map((option) => {
                     const isSelected = multiFilledAnswers.includes(option);
@@ -537,36 +516,104 @@ export default function HomePage() {
               </section>
             )}
 
+            <section className="rounded-3xl bg-white/90 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+              <h2 className="mb-3 text-lg font-extrabold text-slate-700">游戏控制</h2>
+              {mode === 'single_mapping' ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-3">
+                    {status === 'idle' && (
+                      <button
+                        onClick={startRound}
+                        className="rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 px-5 py-3 text-base font-bold text-white shadow-[0_14px_30px_rgba(56,189,248,0.35)] transition-all hover:-translate-y-0.5 active:translate-y-0"
+                      >
+                        开始游戏
+                      </button>
+                    )}
+                    {(status === 'playing' || status === 'incorrect') && (
+                      <button
+                        onClick={resetSingleRound}
+                        className="rounded-2xl bg-white px-5 py-3 text-base font-bold text-amber-600 shadow-sm transition-all hover:bg-amber-50 active:scale-95"
+                      >
+                        重置本题
+                      </button>
+                    )}
+                    {status === 'correct' && (
+                      <button
+                        onClick={startRound}
+                        className="rounded-2xl bg-white px-5 py-3 text-base font-bold text-emerald-600 shadow-sm transition-all hover:bg-emerald-50 active:scale-95"
+                      >
+                        下一题
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => speakCharacter(questionChar)}
+                      disabled={!questionChar}
+                      className="rounded-2xl bg-white px-5 py-3 text-base font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      重听读音
+                    </button>
+                    <div className="rounded-2xl bg-slate-100 px-4 py-3 text-base font-semibold text-slate-700">⏱️ {formattedTimer}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {multiStatus === 'idle' && (
+                    <button
+                      onClick={() => startMultiQuestion()}
+                      className="rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 px-5 py-3 text-base font-bold text-white shadow-[0_14px_30px_rgba(56,189,248,0.35)] transition-all hover:-translate-y-0.5 active:translate-y-0"
+                    >
+                      开始游戏
+                    </button>
+                  )}
+                  {(multiStatus === 'playing' || multiStatus === 'incorrect') && (
+                    <button
+                      onClick={resetMultiQuestion}
+                      disabled={!multiQuestion}
+                      className="rounded-2xl bg-white px-5 py-3 text-base font-bold text-amber-600 shadow-sm transition-all hover:bg-amber-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      重置本题
+                    </button>
+                  )}
+                  {multiStatus === 'correct' && (
+                    <button
+                      onClick={() => startMultiQuestion(multiQuestion?.text)}
+                      disabled={!multiQuestion}
+                      className="rounded-2xl bg-white px-5 py-3 text-base font-bold text-emerald-600 shadow-sm transition-all hover:bg-emerald-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      下一题
+                    </button>
+                  )}
+                </div>
+              )}
+            </section>
+
             {(feedbackMessage || (multiStatus !== 'playing' && multiExplanation)) && (
               <section className="rounded-3xl bg-white/90 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
-                <h2 className="mb-2 text-lg font-extrabold text-slate-700">Feedback Card</h2>
+                <h2 className="mb-2 text-lg font-extrabold text-slate-700">学习反馈</h2>
                 {feedbackMessage && <p className="text-base font-semibold text-slate-700">{feedbackMessage}</p>}
                 {multiStatus !== 'playing' && multiExplanation && (
                   <p className="mt-3 rounded-2xl bg-emerald-100 p-3 text-base text-emerald-900">解析：{multiExplanation}</p>
                 )}
               </section>
             )}
-          </div>
-
-          <aside className="space-y-5">
-            {!isSupabaseConfigured && (
-              <div className="rounded-3xl bg-yellow-100 p-4 text-sm text-yellow-800 shadow-[0_14px_35px_rgba(202,138,4,0.15)]">
-                Supabase is not configured. Gameplay still works locally, but score saving is disabled.
-              </div>
-            )}
-            <section>
-              <h2 className="mb-3 text-lg font-extrabold text-slate-700">History Section</h2>
-              <ScoreTable title="Recent History" scores={history} gameMode={mode} />
-            </section>
-            <section>
-              <h2 className="mb-3 text-lg font-extrabold text-slate-700">Accuracy Leaderboard</h2>
-              <ScoreTable
-                title={mode === 'multi_mapping' ? 'Accuracy Leaderboard' : `Leaderboard (${difficulty}×${difficulty})`}
-                scores={leaderboard}
-                gameMode={mode}
-              />
-            </section>
-          </aside>
+          {!isSupabaseConfigured && (
+            <div className="rounded-3xl bg-yellow-100 p-4 text-sm text-yellow-800 shadow-[0_14px_35px_rgba(202,138,4,0.15)]">
+              Supabase 尚未配置，游戏可正常进行，但成绩暂时无法同步。
+            </div>
+          )}
+          <section>
+            <ScoreTable title="最近记录" scores={history} gameMode={mode} variant="history" />
+          </section>
+          <section>
+            <ScoreTable
+              title={mode === 'multi_mapping' ? '正确率排行榜' : `正确率排行榜（${difficulty}×${difficulty}）`}
+              scores={leaderboard}
+              gameMode={mode}
+              variant="leaderboard"
+            />
+          </section>
         </section>
       </div>
     </main>
