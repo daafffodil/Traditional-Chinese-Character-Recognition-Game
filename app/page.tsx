@@ -10,6 +10,33 @@ import { createRoundGrid, formatTime, pickRandomCharacter } from '@/lib/game';
 import { DifficultyOption, GameStatus, ScoreRow } from '@/types/game';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
+const getConnectionHint = (message: string) => {
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes('not configured')) {
+    return '连接诊断：未检测到 Supabase 环境变量。请检查 NEXT_PUBLIC_SUPABASE_URL 和 NEXT_PUBLIC_SUPABASE_ANON_KEY。';
+  }
+
+  if (lowerMessage.includes('failed to fetch') || lowerMessage.includes('network')) {
+    return '连接诊断：无法连接到服务。请确认 Supabase URL 可访问、网络正常，且未被代理/防火墙拦截。';
+  }
+
+  if (lowerMessage.includes('row-level security') || lowerMessage.includes('rls')) {
+    return '连接诊断：数据库 RLS 拒绝写入。请为 public.tc_game_scores 添加允许 anon insert/select 的策略。';
+  }
+
+  if (lowerMessage.includes('permission denied')) {
+    return '连接诊断：数据库权限不足。请确认使用的 Key 有权限写入 public.tc_game_scores。';
+  }
+
+
+  if (lowerMessage.includes('invalid authentication credentials') || lowerMessage.includes('jwt') || lowerMessage.includes('invalid api key')) {
+    return '连接诊断：Key 无效（Invalid authentication credentials）。请检查 .env 中的 SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY 是否来自同一个 Supabase 项目。';
+  }
+
+  return '连接诊断：写入失败。请检查 Supabase 项目 URL/Key、表名 public.tc_game_scores、以及表字段是否为 player_name/grid_size/completion_time。';
+};
+
 export default function HomePage() {
   const [playerName, setPlayerName] = useState('');
   const [difficulty, setDifficulty] = useState<DifficultyOption>(3);
@@ -18,6 +45,7 @@ export default function HomePage() {
   const [gridCells, setGridCells] = useState<string[]>([]);
   const [status, setStatus] = useState<GameStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('Press start to begin!');
+  const [connectionHint, setConnectionHint] = useState('');
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -60,6 +88,7 @@ export default function HomePage() {
     setGridCells(cells);
     setStatus('playing');
     setStatusMessage('Listen and click the correct Traditional Chinese character!');
+    setConnectionHint('');
     setSelectedCell(null);
     setStartTime(Date.now());
     setElapsedMs(0);
@@ -84,8 +113,10 @@ export default function HomePage() {
       const result = await saveScore(playerName.trim(), difficulty, completionTime);
       if (result.success) {
         setStatusMessage(`Great job! Time: ${completionTime}s. Score saved.`);
+        setConnectionHint('');
       } else {
         setStatusMessage(`Great job! Time: ${completionTime}s. ${result.message}`);
+        setConnectionHint(getConnectionHint(result.message));
       }
 
       await loadScorePanels();
@@ -152,6 +183,7 @@ export default function HomePage() {
           </div>
 
           <p className="text-lg font-semibold text-slate-700">{statusMessage}</p>
+          {connectionHint && <p className="rounded-lg bg-yellow-100 p-3 text-sm text-yellow-900">{connectionHint}</p>}
           {questionChar && (
             <p className="text-lg">Question (Simplified): <span className="text-2xl font-bold">{questionChar}</span></p>
           )}
