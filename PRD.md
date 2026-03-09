@@ -4,7 +4,7 @@
 Traditional Chinese Character Recognition Game
 
 ## Version
-MVP v1.2
+MVP v1.3
 
 ## Target Users
 Primary school students learning to recognize Traditional Chinese characters.
@@ -32,6 +32,7 @@ The product now includes two defined game modes:
 - Interaction is **click-to-fill** (player clicks candidate characters/words to fill blanks).
 - First runnable version targets only **10–15 questions**.
 - The question bank is stored **locally in code** (not in database).
+- Scoring is **correctness-based, not speed-based**.
 
 ---
 
@@ -58,12 +59,19 @@ The product now includes two defined game modes:
 5. Evaluate correctness for the full question and show feedback.
 6. Record gameplay results in existing score/history pipeline as needed.
 
+### `multi_mapping` Scoring Rules (Updated)
+- `multi_mapping` does not use completion time for score ranking.
+- Core metric is how many blanks are correctly answered in one question.
+- `correct_blank_count` = number of blanks answered correctly.
+- `is_correct` = `true` only when `correct_blank_count == blank_count`.
+- Example: if `blank_count = 3` and `correct_blank_count = 2`, displayed accuracy is `2 / 3`.
+
 ---
 
 ## UI Layout
 
 ### Shared
-- Timer / progress indicators
+- Progress indicators
 - Correct/incorrect feedback audio + visual state
 
 ### `single_mapping`
@@ -74,6 +82,15 @@ The product now includes two defined game modes:
 - Sentence/phrase display area with multiple blanks
 - Sequential blank highlight state
 - Clickable option bank for fill-in
+- Recent history table columns: `Name | Simplified | Accuracy | Perfect | Date`
+  - `Accuracy` format: `correct_blank_count / blank_count` (e.g., `2 / 3`)
+  - `Perfect` shows `✅` only when all blanks are correct; otherwise empty
+- Ranking table is renamed to **Accuracy Leaderboard** (replacing speed/grid leaderboard naming)
+- Ranking priority:
+  1. Perfect answers first (`is_correct = true`)
+  2. Higher accuracy (`correct_blank_count / blank_count`)
+  3. Higher `correct_blank_count`
+  4. Newer `created_at`
 
 ---
 
@@ -106,14 +123,21 @@ The product now includes two defined game modes:
 
 ### Database Table (Current MVP)
 
-#### `scores`
-| field | type |
-|---|---|
-| id | integer |
-| player_name | text |
-| grid_size | integer |
-| completion_time | float |
-| created_at | timestamp |
+#### `tc_game_scores`
+| field | type | notes |
+|---|---|---|
+| id | integer | primary key |
+| player_name | text | player display name |
+| mode | text | `single_mapping` / `multi_mapping` |
+| target_simplified | text | simplified character prompt |
+| blank_count | integer | total blanks in a `multi_mapping` question |
+| correct_blank_count | integer | number of blanks answered correctly |
+| is_correct | boolean | `true` when `correct_blank_count == blank_count` |
+| grid_size | integer | used by `single_mapping` |
+| completion_time | float | used by `single_mapping` |
+| created_at | timestamp | record creation time |
+
+> Note: `correct_blank_count` is the newly added field used by `multi_mapping` history and ranking.
 
 ---
 
@@ -132,6 +156,8 @@ The product now includes two defined game modes:
 - Sequential blank highlighting
 - Click-to-fill interaction
 - Initial 10–15 local-code questions
+- Accuracy-based scoring with `correct_blank_count`
+- Accuracy-first history and leaderboard presentation
 
 ---
 

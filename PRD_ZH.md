@@ -4,7 +4,7 @@
 繁体字识别训练游戏
 
 ## 版本
-MVP v1.2
+MVP v1.3
 
 ## 目标用户
 学习繁体字识别的小学生。
@@ -32,6 +32,7 @@ MVP v1.2
 - 交互方式为**点击填空（click-to-fill）**。
 - 首个可运行版本仅需 **10～15 题**。
 - 题库保留在**本地代码**中，不放数据库。
+- 计分为**正确率导向**，不是速度导向。
 
 ---
 
@@ -58,12 +59,19 @@ MVP v1.2
 5. 对整题进行判定并反馈正误。
 6. 按需要接入现有成绩/历史记录流程。
 
+### `multi_mapping` 计分规则（更新）
+- `multi_mapping` 不使用完成时间进行排名。
+- 核心指标是单题中答对空格数量。
+- `correct_blank_count` = 玩家答对的空格数。
+- `is_correct` 仅在 `correct_blank_count == blank_count` 时为 `true`。
+- 示例：若 `blank_count = 3` 且 `correct_blank_count = 2`，界面准确度显示为 `2 / 3`。
+
 ---
 
 ## 界面结构
 
 ### 通用
-- 计时与进度提示
+- 进度提示
 - 正误音效与视觉反馈
 
 ### `single_mapping`
@@ -74,6 +82,15 @@ MVP v1.2
 - 句子/短语展示区（含多个空格）
 - 空格顺序高亮状态
 - 可点击候选区（用于填空）
+- 最近记录表格列：`Name | Simplified | Accuracy | Perfect | Date`
+  - `Accuracy` 格式：`correct_blank_count / blank_count`（例如 `2 / 3`）
+  - `Perfect`：全部空格正确显示 `✅`，否则留空
+- 排名表不再使用 “Leaderboard (3x3)” 命名，改为 **Accuracy Leaderboard**
+- 排名优先级：
+  1. 完全正确优先（`is_correct = true`）
+  2. 准确度更高优先（`correct_blank_count / blank_count`）
+  3. `correct_blank_count` 更高优先
+  4. `created_at` 更新（更晚）优先
 
 ---
 
@@ -106,14 +123,21 @@ MVP v1.2
 
 ### 当前数据表
 
-#### `scores` 表
-| 字段 | 类型 |
-|---|---|
-| id | integer |
-| player_name | text |
-| grid_size | integer |
-| completion_time | float |
-| created_at | timestamp |
+#### `tc_game_scores` 表
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | integer | 主键 |
+| player_name | text | 玩家显示名称 |
+| mode | text | `single_mapping` / `multi_mapping` |
+| target_simplified | text | 简体提示字 |
+| blank_count | integer | `multi_mapping` 单题总空格数 |
+| correct_blank_count | integer | 玩家答对空格数量 |
+| is_correct | boolean | 当 `correct_blank_count == blank_count` 时为 `true` |
+| grid_size | integer | `single_mapping` 使用 |
+| completion_time | float | `single_mapping` 使用 |
+| created_at | timestamp | 记录创建时间 |
+
+> 说明：`correct_blank_count` 为新增字段，用于 `multi_mapping` 的历史展示与准确度排名。
 
 ---
 
@@ -132,6 +156,8 @@ MVP v1.2
 - 顺序高亮空格
 - 点击填空交互
 - 首版 10～15 题（本地代码题库）
+- 基于 `correct_blank_count` 的计分逻辑
+- 以准确度为核心的历史与排行榜展示
 
 ---
 
