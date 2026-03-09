@@ -33,7 +33,7 @@ const getConnectionHint = (message: string) => {
     return '连接诊断：数据库权限不足。请确认使用的 Key 有权限写入 public.tc_game_scores。';
   }
 
-  return '连接诊断：写入失败。请检查 Supabase 项目 URL/Key、表名 public.tc_game_scores、以及表字段是否为 player_name/grid_size/completion_time。';
+  return '连接诊断：写入失败。请检查 Supabase 项目 URL/Key、表名 public.tc_game_scores、以及所需字段是否完整（如 game_mode/target_simplified/question_type/blank_count/is_correct）。';
 };
 
 const pickRandomMultiQuestion = (excludeText?: string) => {
@@ -65,17 +65,18 @@ export default function HomePage() {
 
   const [history, setHistory] = useState<ScoreRow[]>([]);
   const [leaderboard, setLeaderboard] = useState<ScoreRow[]>([]);
+  const [scoreMessage, setScoreMessage] = useState('');
 
   const timerIsRunning = status === 'playing' && startTime !== null;
 
   const loadScorePanels = useCallback(async () => {
     const [historyData, leaderboardData] = await Promise.all([
-      fetchRecentHistory(),
-      fetchLeaderboard(difficulty),
+      fetchRecentHistory(mode),
+      fetchLeaderboard(difficulty, mode),
     ]);
     setHistory(historyData);
     setLeaderboard(leaderboardData);
-  }, [difficulty]);
+  }, [difficulty, mode]);
 
   useEffect(() => {
     void loadScorePanels();
@@ -134,13 +135,24 @@ export default function HomePage() {
       setStatus('correct');
       setStatusMessage(`Great job! Time: ${completionTime}s`);
 
-      const result = await saveScore(playerName.trim(), difficulty, completionTime);
+      const result = await saveScore({
+        playerName: playerName.trim(),
+        gridSize: difficulty,
+        completionTime,
+        gameMode: 'single_mapping',
+        targetSimplified: questionChar,
+        questionType: 'single_choice',
+        blankCount: 1,
+        isCorrect: true,
+      });
       if (result.success) {
         setStatusMessage(`Great job! Time: ${completionTime}s. Score saved.`);
         setConnectionHint('');
+        setScoreMessage('');
       } else {
         setStatusMessage(`Great job! Time: ${completionTime}s. ${result.message}`);
         setConnectionHint(getConnectionHint(result.message));
+        setScoreMessage('已完成本局，暂时无法同步到云端，游戏可继续进行。');
       }
 
       await loadScorePanels();
@@ -157,7 +169,7 @@ export default function HomePage() {
     }, 450);
   };
 
-  const onMultiOptionClick = (value: string) => {
+  const onMultiOptionClick = async (value: string) => {
     if (!multiQuestion || multiStatus !== 'playing') {
       return;
     }
@@ -185,7 +197,25 @@ export default function HomePage() {
       setMultiStatusMessage('有些空格还不对，按「重置本题」再试一次。');
     }
 
-    // TODO: If we define a dedicated multi_mapping score schema, save multi mode results to Supabase.
+    const result = await saveScore({
+      playerName: playerName.trim(),
+      gridSize: multiQuestion.blanks.length,
+      completionTime: 0,
+      gameMode: 'multi_mapping',
+      targetSimplified: multiQuestion.simplified,
+      questionType: 'multi_blank',
+      blankCount: multiQuestion.blanks.length,
+      isCorrect: isAllCorrect,
+    });
+
+    if (!result.success) {
+      setConnectionHint(getConnectionHint(result.message));
+      setScoreMessage('多空题结果已在本地完成判定，云端保存暂时失败。');
+    } else {
+      setScoreMessage('');
+      setConnectionHint('');
+      await loadScorePanels();
+    }
   };
 
   const resetMultiQuestion = () => {
@@ -298,6 +328,7 @@ export default function HomePage() {
 
               <p className="text-lg font-semibold text-slate-700">{statusMessage}</p>
               {connectionHint && <p className="rounded-lg bg-yellow-100 p-3 text-sm text-yellow-900">{connectionHint}</p>}
+              {scoreMessage && <p className="rounded-lg bg-amber-100 p-3 text-sm text-amber-900">{scoreMessage}</p>}
               {questionChar && (
                 <p className="text-lg">
                   Question (Simplified): <span className="text-2xl font-bold">{questionChar}</span>
@@ -338,6 +369,8 @@ export default function HomePage() {
               </div>
 
               <p className="text-xl font-semibold text-slate-800">{multiStatusMessage}</p>
+              {scoreMessage && <p className="rounded-lg bg-amber-100 p-3 text-sm text-amber-900">{scoreMessage}</p>}
+              {connectionHint && <p className="rounded-lg bg-yellow-100 p-3 text-sm text-yellow-900">{connectionHint}</p>}
 
               {multiQuestion && (
                 <>

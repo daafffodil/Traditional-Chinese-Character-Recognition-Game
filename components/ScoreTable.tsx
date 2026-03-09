@@ -7,6 +7,8 @@ type ScoreTableProps = {
 };
 
 export default function ScoreTable({ title, scores }: ScoreTableProps) {
+  const showMultiDetails = scores.some((score) => score.game_mode === 'multi_mapping');
+
   return (
     <section className="rounded-2xl bg-white p-4 shadow">
       <h2 className="mb-3 text-xl font-bold">{title}</h2>
@@ -17,13 +19,15 @@ export default function ScoreTable({ title, scores }: ScoreTableProps) {
               <th className="py-2">Name</th>
               <th className="py-2">Grid</th>
               <th className="py-2">Time</th>
+              {showMultiDetails && <th className="py-2">简体</th>}
+              {showMultiDetails && <th className="py-2">空格数</th>}
               <th className="py-2">Date</th>
             </tr>
           </thead>
           <tbody>
             {scores.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-3 text-slate-500">
+                <td colSpan={showMultiDetails ? 6 : 4} className="py-3 text-slate-500">
                   No records yet.
                 </td>
               </tr>
@@ -33,6 +37,8 @@ export default function ScoreTable({ title, scores }: ScoreTableProps) {
                   <td className="py-2">{score.player_name}</td>
                   <td className="py-2">{score.grid_size}×{score.grid_size}</td>
                   <td className="py-2">{formatTime(score.completion_time * 1000)}</td>
+                  {showMultiDetails && <td className="py-2">{score.target_simplified ?? '-'}</td>}
+                  {showMultiDetails && <td className="py-2">{score.blank_count ?? '-'}</td>}
                   <td className="py-2">{new Date(score.created_at).toLocaleDateString()}</td>
                 </tr>
               ))
