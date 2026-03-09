@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
   const gridSize = Number(body.gridSize);
   const completionTime = Number(body.completionTime);
   const blankCount = Number(body.blankCount);
+  const correctBlankCount = Number(body.correctBlankCount);
   const isCorrect = Boolean(body.isCorrect);
   const targetSimplified = typeof body.targetSimplified === 'string' ? body.targetSimplified : '';
 
@@ -39,6 +40,9 @@ export async function POST(request: NextRequest) {
     !Number.isFinite(gridSize) ||
     !Number.isFinite(completionTime) ||
     !Number.isFinite(blankCount) ||
+    !Number.isFinite(correctBlankCount) ||
+    correctBlankCount < 0 ||
+    correctBlankCount > blankCount ||
     !isValidGameMode(body.gameMode) ||
     !isValidQuestionType(body.questionType) ||
     !targetSimplified
@@ -57,6 +61,7 @@ export async function POST(request: NextRequest) {
       target_simplified: targetSimplified,
       question_type: body.questionType,
       blank_count: blankCount,
+      correct_blank_count: correctBlankCount,
       is_correct: isCorrect,
     });
 
@@ -82,26 +87,59 @@ export async function GET(request: NextRequest) {
   const gameModeParam = searchParams.get('gameMode');
   const gameMode = isValidGameMode(gameModeParam) ? gameModeParam : 'single_mapping';
 
-  const [historyResult, leaderboardResult] = await Promise.all([
-    supabase
-      .schema('public')
-      .from('tc_game_scores')
-      .select('*')
-      .eq('game_mode', gameMode)
-      .order('created_at', { ascending: false })
-      .limit(historyLimit),
-    supabase
-      .schema('public')
-      .from('tc_game_scores')
-      .select('*')
-      .eq('game_mode', gameMode)
-      .eq('grid_size', gridSize)
-      .order('completion_time', { ascending: true })
-      .limit(leaderboardLimit),
-  ]);
+  const historyQuery = supabase
+    .schema('public')
+    .from('tc_game_scores')
+    .select('*')
+    .eq('game_mode', gameMode)
+    .order('created_at', { ascending: false })
+    .limit(historyLimit);
+
+  const leaderboardBaseQuery = supabase
+    .schema('public')
+    .from('tc_game_scores')
+    .select('*')
+    .eq('game_mode', gameMode);
+
+  const leaderboardQuery =
+    gameMode === 'multi_mapping'
+      ? leaderboardBaseQuery.order('created_at', { ascending: false }).limit(leaderboardLimit)
+      : leaderboardBaseQuery.eq('grid_size', gridSize).order('completion_time', { ascending: true }).limit(leaderboardLimit);
+
+  const [historyResult, leaderboardResult] = await Promise.all([historyQuery, leaderboardQuery]);
+
+  const history = historyResult.error || !historyResult.data ? [] : historyResult.data;
+  const rawLeaderboard = leaderboardResult.error || !leaderboardResult.data ? [] : leaderboardResult.data;
+
+  const leaderboard =
+    gameMode === 'multi_mapping'
+      ? [...rawLeaderboard].sort((a, b) => {
+          const aBlankCount = Math.max(1, a.blank_count ?? 0);
+          const bBlankCount = Math.max(1, b.blank_count ?? 0);
+          const aCorrectBlankCount = Math.min(aBlankCount, Math.max(0, a.correct_blank_count ?? 0));
+          const bCorrectBlankCount = Math.min(bBlankCount, Math.max(0, b.correct_blank_count ?? 0));
+          const aPerfect = Boolean(a.is_correct);
+          const bPerfect = Boolean(b.is_correct);
+
+          if (aPerfect !== bPerfect) {
+            return aPerfect ? -1 : 1;
+          }
+
+          const accuracyDiff = bCorrectBlankCount / bBlankCount - aCorrectBlankCount / aBlankCount;
+          if (Math.abs(accuracyDiff) > Number.EPSILON) {
+            return accuracyDiff;
+          }
+
+          if (aCorrectBlankCount !== bCorrectBlankCount) {
+            return bCorrectBlankCount - aCorrectBlankCount;
+          }
+
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        })
+      : rawLeaderboard;
 
   return NextResponse.json({
-    history: historyResult.error || !historyResult.data ? [] : historyResult.data,
-    leaderboard: leaderboardResult.error || !leaderboardResult.data ? [] : leaderboardResult.data,
+    history,
+    leaderboard: leaderboard.slice(0, leaderboardLimit),
   });
 }

@@ -10,6 +10,7 @@ type SaveScoreInput = {
   targetSimplified: string;
   questionType: 'single_choice' | 'multi_blank';
   blankCount: number;
+  correctBlankCount: number;
   isCorrect: boolean;
 };
 
@@ -31,6 +32,7 @@ export const saveScore = async ({
   targetSimplified,
   questionType,
   blankCount,
+  correctBlankCount,
   isCorrect,
 }: SaveScoreInput) => {
   try {
@@ -45,6 +47,7 @@ export const saveScore = async ({
         targetSimplified,
         questionType,
         blankCount,
+        correctBlankCount,
         isCorrect,
       }),
     });

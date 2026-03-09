@@ -33,7 +33,7 @@ const getConnectionHint = (message: string) => {
     return '连接诊断：数据库权限不足。请确认使用的 Key 有权限写入 public.tc_game_scores。';
   }
 
-  return '连接诊断：写入失败。请检查 Supabase 项目 URL/Key、表名 public.tc_game_scores、以及所需字段是否完整（如 game_mode/target_simplified/question_type/blank_count/is_correct）。';
+  return '连接诊断：写入失败。请检查 Supabase 项目 URL/Key、表名 public.tc_game_scores、以及所需字段是否完整（如 game_mode/target_simplified/question_type/blank_count/correct_blank_count/is_correct）。';
 };
 
 const pickRandomMultiQuestion = (excludeText?: string) => {
@@ -85,6 +85,7 @@ export default function HomePage() {
       targetSimplified,
       questionType,
       blankCount,
+      correctBlankCount,
       isCorrect,
       gridSize,
       successMessage,
@@ -96,6 +97,7 @@ export default function HomePage() {
       targetSimplified: string;
       questionType: 'single_choice' | 'multi_blank';
       blankCount: number;
+      correctBlankCount: number;
       isCorrect: boolean;
       gridSize: number;
       successMessage?: string;
@@ -111,6 +113,7 @@ export default function HomePage() {
         targetSimplified,
         questionType,
         blankCount,
+        correctBlankCount,
         isCorrect,
       });
 
@@ -199,6 +202,7 @@ export default function HomePage() {
         targetSimplified: questionChar,
         questionType: 'single_choice',
         blankCount: 1,
+        correctBlankCount: 1,
         isCorrect: true,
         successMessage: `Great job! Time: ${completionTime}s. Score saved.`,
         failureMessage: `Great job! Time: ${completionTime}s. 已完成本局，暂时无法同步到云端，游戏可继续进行。`,
@@ -235,7 +239,13 @@ export default function HomePage() {
       return;
     }
 
-    const isAllCorrect = multiQuestion.blanks.every((blank, index) => updatedAnswers[index] === blank.answer);
+    const blankCount = multiQuestion.blanks.length;
+    const rawCorrectBlankCount = multiQuestion.blanks.reduce(
+      (count, blank, index) => (updatedAnswers[index] === blank.answer ? count + 1 : count),
+      0,
+    );
+    const correctBlankCount = Math.min(blankCount, Math.max(0, rawCorrectBlankCount));
+    const isAllCorrect = correctBlankCount === blankCount;
 
     if (isAllCorrect) {
       setMultiStatus('correct');
@@ -251,7 +261,8 @@ export default function HomePage() {
       gameMode: 'multi_mapping',
       targetSimplified: multiQuestion.simplified,
       questionType: 'multi_blank',
-      blankCount: multiQuestion.blanks.length,
+      blankCount,
+      correctBlankCount,
       isCorrect: isAllCorrect,
       failureMessage: '多空题结果已在本地完成判定，云端保存暂时失败。',
     });
@@ -469,8 +480,16 @@ export default function HomePage() {
               Supabase is not configured. Gameplay still works locally, but score saving is disabled.
             </div>
           )}
-          <ScoreTable title="Recent History" scores={history} />
-          <ScoreTable title={`Leaderboard (${difficulty}×${difficulty})`} scores={leaderboard} />
+          <ScoreTable
+            title="Recent History"
+            scores={history}
+            gameMode={mode}
+          />
+          <ScoreTable
+            title={mode === 'multi_mapping' ? 'Accuracy Leaderboard' : `Leaderboard (${difficulty}×${difficulty})`}
+            scores={leaderboard}
+            gameMode={mode}
+          />
         </aside>
       </div>
     </main>
