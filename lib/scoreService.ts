@@ -56,8 +56,9 @@ export const saveScore = async ({
     }
 
     return { success: true, message: 'Score saved!' };
-  } catch {
-    return { success: false, message: 'Save failed due to a network or configuration issue.' };
+  } catch (error) {
+    const details = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, message: `Save failed due to a network or configuration issue. (${details})` };
   }
 };
 

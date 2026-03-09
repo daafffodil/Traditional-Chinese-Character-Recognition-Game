@@ -11,9 +11,10 @@
   - `question_type`
   - `blank_count`
   - `is_correct`
-- **Score saving now supports both modes using the same table (`public.tc_game_scores`)**:
+- **Player name input is now shared across both modes** and both save flows use the same `player_name` (fallback to `Anonymous` when empty).
+- **Score saving now supports both modes using the same table (`public.tc_game_scores`) via a shared helper**:
   - `single_mapping` saves with `game_mode=single_mapping`, `question_type=single_choice`, `blank_count=1`, `is_correct=true`, and current simplified character.
-  - `multi_mapping` saves with `game_mode=multi_mapping`, `question_type=multi_blank`, per-question blank count, full-question correctness, and current simplified character.
+  - `multi_mapping` now correctly saves with `game_mode=multi_mapping`, `question_type=multi_blank`, per-question blank count, full-question correctness, and current simplified character.
 - **History and leaderboard now support mode filtering**:
   - queries default to current mode,
   - single_mapping pages remain compatible,
@@ -25,6 +26,7 @@
 ## 3. Remaining Gaps / Follow-ups
 - **multi_mapping completion_time currently uses a placeholder value (`0`)**.
   - If product wants timing-based ranking for multi mode, add a dedicated timer model for multi_mapping.
+- **Current known limitation**: `multi_mapping` leaderboard is still shown under the single shared `Leaderboard (${difficulty}×${difficulty})` label and relies on current difficulty for `grid_size` filtering.
 - **Further polish opportunities**:
   - per-blank immediate correctness hints,
   - multi_mapping-specific progress/session tracking,
