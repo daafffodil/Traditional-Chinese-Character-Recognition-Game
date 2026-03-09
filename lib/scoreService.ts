@@ -1,62 +1,63 @@
 import { ScoreRow } from '@/types/game';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+
+const toSearchParams = (params: Record<string, string | number>) => {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    query.set(key, String(value));
+  });
+
+  return query.toString();
+};
 
 export const saveScore = async (playerName: string, gridSize: number, completionTime: number) => {
-  if (!isSupabaseConfigured || !supabase) {
-    return { success: false, message: 'Supabase is not configured. Score was not saved.' };
-  }
-
-  const { error } = await supabase
-    .schema('public')
-    .from('tc_game_scores')
-    .insert({
-      player_name: playerName || 'Anonymous',
-      grid_size: gridSize,
-      completion_time: completionTime,
+  try {
+    const response = await fetch('/api/scores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerName, gridSize, completionTime }),
     });
 
-  if (error) {
-    return { success: false, message: `Save failed: ${error.message}` };
-  }
+    const payload = (await response.json()) as { success?: boolean; message?: string };
 
-  return { success: true, message: 'Score saved!' };
+    if (!response.ok || !payload.success) {
+      return { success: false, message: payload.message ?? 'Score was not saved.' };
+    }
+
+    return { success: true, message: 'Score saved!' };
+  } catch {
+    return { success: false, message: 'Save failed due to a network or configuration issue.' };
+  }
 };
 
 export const fetchRecentHistory = async (limit = 8): Promise<ScoreRow[]> => {
-  if (!isSupabaseConfigured || !supabase) {
+  try {
+    const query = toSearchParams({ historyLimit: limit, leaderboardLimit: 1, gridSize: 3 });
+    const response = await fetch(`/api/scores?${query}`, { method: 'GET' });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as { history?: ScoreRow[] };
+    return payload.history ?? [];
+  } catch {
     return [];
   }
-
-  const { data, error } = await supabase
-    .schema('public')
-    .from('tc_game_scores')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error || !data) {
-    return [];
-  }
-
-  return data;
 };
 
 export const fetchLeaderboard = async (gridSize: number, limit = 10): Promise<ScoreRow[]> => {
-  if (!isSupabaseConfigured || !supabase) {
+  try {
+    const query = toSearchParams({ historyLimit: 1, leaderboardLimit: limit, gridSize });
+    const response = await fetch(`/api/scores?${query}`, { method: 'GET' });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as { leaderboard?: ScoreRow[] };
+    return payload.leaderboard ?? [];
+  } catch {
     return [];
   }
-
-  const { data, error } = await supabase
-    .schema('public')
-    .from('tc_game_scores')
-    .select('*')
-    .eq('grid_size', gridSize)
-    .order('completion_time', { ascending: true })
-    .limit(limit);
-
-  if (error || !data) {
-    return [];
-  }
-
-  return data;
 };
